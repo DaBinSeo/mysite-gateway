@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nginx-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      # upstream이 host.docker.internal을 가리키므로 이름만 풀리게 해서 문법을 검사한다
+      - name: nginx -t
+        run: |
+          docker run --rm \
+            --add-host host.docker.internal:127.0.0.1 \
+            -v "$PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.27-alpine nginx -t
+
+      - name: Validate docker-compose.yml
+        run: docker compose config --quiet
